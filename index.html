@@ -27,10 +27,18 @@
       </div>
       <div class="monthbar">
         <button id="prevMonth" class="icon-btn" type="button" aria-label="上個月">‹</button>
-        <button id="monthBtn" class="month-btn" type="button">
+        <button id="monthBtn" class="month-btn" type="button" aria-haspopup="true">
           <span id="monthLabel">—</span>
         </button>
         <button id="nextMonth" class="icon-btn" type="button" aria-label="下個月">›</button>
+        <div id="monthPanel" class="month-panel" hidden>
+          <div class="mp-head">
+            <button id="mpPrev" class="icon-btn" type="button" aria-label="上一年">‹</button>
+            <b id="mpYear">2026</b>
+            <button id="mpNext" class="icon-btn" type="button" aria-label="下一年">›</button>
+          </div>
+          <div class="mp-grid" id="mpGrid"></div>
+        </div>
       </div>
     </header>
 

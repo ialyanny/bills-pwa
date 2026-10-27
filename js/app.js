@@ -509,18 +509,61 @@ function selectMonth(ym) {
   renderAll();
 }
 
+/* 月份快速跳轉面板 */
+let mpYear = new Date().getFullYear();
+
+function renderMonthPanel() {
+  const st = state();
+  $('#mpYear').textContent = `${mpYear} 年`;
+  $('#mpGrid').innerHTML = Array.from({ length: 12 }, (_, i) => {
+    const m = i + 1;
+    const ym = `${mpYear}-${String(m).padStart(2, '0')}`;
+    const month = st.months[ym];
+    const has = month && (Object.keys(month.cards).length > 0 || month.others.length > 0);
+    const cls = `mp-cell${has ? ' has-data' : ''}${ym === st.activeMonth ? ' is-current' : ''}`;
+    return `<button class="${cls}" type="button" data-ym="${ym}">${m} 月</button>`;
+  }).join('');
+}
+
+function toggleMonthPanel(force) {
+  const panel = $('#monthPanel');
+  const open = force ?? panel.hidden;
+  if (open) {
+    mpYear = Number(state().activeMonth.slice(0, 4));
+    renderMonthPanel();
+  }
+  panel.hidden = !open;
+}
+
 /* ------------------------------------------------------------------ *
  * 事件綁定
  * ------------------------------------------------------------------ */
 function bind() {
   $('#prevMonth').addEventListener('click', () => selectMonth(addMonths(state().activeMonth, -1)));
   $('#nextMonth').addEventListener('click', () => selectMonth(addMonths(state().activeMonth, 1)));
-  $('#monthBtn').addEventListener('click', () => {
-    const now = todayStr().slice(0, 7);
-    if (state().activeMonth === now) toast(ymLabel(now));
-    else {
-      selectMonth(now);
-      toast('回到本月');
+  $('#monthBtn').addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    toggleMonthPanel();
+  });
+  $('#mpPrev').addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    mpYear -= 1;
+    renderMonthPanel();
+  });
+  $('#mpNext').addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    mpYear += 1;
+    renderMonthPanel();
+  });
+  $('#mpGrid').addEventListener('click', (ev) => {
+    const cell = ev.target.closest('[data-ym]');
+    if (!cell) return;
+    selectMonth(cell.dataset.ym);
+    toggleMonthPanel(false);
+  });
+  document.addEventListener('click', (ev) => {
+    if (!$('#monthPanel').hidden && !ev.target.closest('#monthPanel') && !ev.target.closest('#monthBtn')) {
+      toggleMonthPanel(false);
     }
   });
 

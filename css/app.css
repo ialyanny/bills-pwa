@@ -167,11 +167,84 @@ h3 {
 }
 
 .monthbar {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   margin-top: 8px;
+}
+
+/* 月份快速跳轉 */
+.month-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(330px, 92vw);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 10px 12px 12px;
+  z-index: 40;
+}
+
+.mp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.mp-head b {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.mp-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.mp-cell {
+  position: relative;
+  border: 1px solid transparent;
+  background: var(--surface-2);
+  color: var(--text);
+  border-radius: 9px;
+  padding: 8px 0;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+
+.mp-cell:hover {
+  border-color: var(--line);
+}
+
+.mp-cell.has-data::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.6;
+}
+
+.mp-cell.is-current {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.mp-cell.is-current::after {
+  background: #fff;
+  opacity: 0.85;
 }
 
 .month-btn {
