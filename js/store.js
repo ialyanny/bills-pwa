@@ -11,12 +11,15 @@ export const clone = (o) => JSON.parse(JSON.stringify(o));
 export const uid = (prefix = 'x') =>
   `${prefix}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
+export const DEFAULT_SYNC_CODE = 'BILLS-DEFAULT-2026';
+
 function defaultSettings() {
   return {
     deviceId: uid('d'),
     deviceName: '',
-    syncEnabled: false,
-    syncCode: '',
+    syncEnabled: true,
+    syncCode: DEFAULT_SYNC_CODE,
+    syncDisabledByUser: false,
     lastSyncAt: null,
   };
 }
@@ -39,6 +42,10 @@ function migrate(stored) {
   const base = defaultState();
   const st = { ...base, ...stored };
   st.settings = { ...base.settings, ...(stored.settings || {}) };
+  if (!st.settings.syncDisabledByUser && !st.settings.syncCode) {
+    st.settings.syncEnabled = true;
+    st.settings.syncCode = DEFAULT_SYNC_CODE;
+  }
   st.cards = stored.cards?.length ? stored.cards : base.cards;
   st.templates = stored.templates?.length ? stored.templates : base.templates;
   st.months = stored.months && typeof stored.months === 'object' ? stored.months : base.months;

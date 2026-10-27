@@ -840,10 +840,6 @@ function bind() {
 
   $('#enableSyncBtn').addEventListener('click', async () => {
     const code = $('#syncCode').value.trim();
-    if (code.replace(/[^A-Za-z0-9]/g, '').length < 8) {
-      toast('同步碼至少 8 個字元');
-      return;
-    }
     try {
       await enableSync(code);
       toast('同步已開啟');

@@ -127,18 +127,18 @@
           <div class="block-head"><h2>跨裝置同步</h2></div>
           <div id="syncPanel" class="panel">
             <p class="hint">
-              用一組「同步碼」把資料加密後存到雲端。其他裝置輸入同一組碼，就會看到同一份帳本。
-              同步碼遺失就無法解開雲端資料，請務必記下來。
+              已預設開啟自動雲端同步，打開網址就能直接跨裝置共用同一份帳本，不需額外輸入同步碼。
+              （進階：若想建立獨立帳本，可自訂下方同步碼）
             </p>
             <div class="field">
-              <label for="syncCode">同步碼</label>
+              <label for="syncCode">同步碼（留空即使用預設帳本）</label>
               <div class="input-row">
-                <input id="syncCode" class="input" type="text" inputmode="text" autocomplete="off" placeholder="XXXX-XXXX-XXXX" />
-                <button id="genCodeBtn" class="ghost-btn" type="button">產生</button>
+                <input id="syncCode" class="input" type="text" inputmode="text" autocomplete="off" placeholder="預設自動同步（BILLS-DEFAULT-2026）" />
+                <button id="genCodeBtn" class="ghost-btn" type="button">自訂</button>
               </div>
             </div>
             <div class="btn-row">
-              <button id="enableSyncBtn" class="primary-btn" type="button">開啟同步</button>
+              <button id="enableSyncBtn" class="primary-btn" type="button">重新連線</button>
               <button id="syncNowBtn" class="ghost-btn" type="button">立即同步</button>
               <button id="disableSyncBtn" class="ghost-btn danger" type="button">關閉</button>
             </div>

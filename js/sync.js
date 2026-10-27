@@ -7,7 +7,7 @@
  *   2. 同步碼同時決定「房間」：同一組碼 = 同一份帳本。
  *   3. 離線時照常使用，回到線上自動補傳。
  */
-import { getState, replaceState, commit, persistNow } from './store.js';
+import { getState, replaceState, commit, persistNow, DEFAULT_SYNC_CODE } from './store.js';
 
 const SUPABASE_URL = 'https://nutkocotbncqxgvjkfxi.supabase.co';
 const SUPABASE_ANON_KEY =
@@ -240,10 +240,11 @@ function subscribeRealtime(room, key) {
  * 對外 API
  * ---------------------------------------------------------------- */
 export async function enableSync(code) {
-  const clean = normalizeCode(code);
-  if (clean.length < 8) throw new Error('同步碼至少 8 個字元');
+  const clean = normalizeCode(code || DEFAULT_SYNC_CODE);
+  if (clean.length < 4) throw new Error('同步碼至少 4 個字元');
   commit((s) => {
     s.settings.syncEnabled = true;
+    s.settings.syncDisabledByUser = false;
     s.settings.syncCode = clean;
   }, 'sync-setting');
   keyCache = await deriveKey(clean);
@@ -254,7 +255,7 @@ export async function enableSync(code) {
 export function disableSync() {
   commit((s) => {
     s.settings.syncEnabled = false;
-    s.settings.syncCode = '';
+    s.settings.syncDisabledByUser = true;
   }, 'sync-setting');
   keyCache = null;
   loaded = false;

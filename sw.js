@@ -3,7 +3,7 @@
  * 策略：自家檔案「網路優先、失敗才用快取」（確保改版立即生效，離線仍可開）；
  *       Supabase API 完全不快取；第三方 CDN 先快取、背景更新。
  */
-const CACHE_VERSION = 'bills-v3';
+const CACHE_VERSION = 'bills-v4';
 const PRECACHE = [
   './',
   './index.html',
