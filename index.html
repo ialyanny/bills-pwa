@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>帳單備忘錄</title>
+    <meta name="description" content="每月信用卡與固定帳單的繳款備忘錄，離線可用、跨裝置加密同步。" />
+    <meta name="theme-color" content="#0f172a" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="帳單" />
+    <link rel="stylesheet" href="css/app.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-row">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">帳</span>
+          <span class="brand-text">帳單備忘錄</span>
+        </div>
+        <button id="syncPill" class="sync-pill" type="button" title="同步狀態">
+          <span class="dot"></span><span id="syncText">本機</span>
+        </button>
+      </div>
+      <div class="monthbar">
+        <button id="prevMonth" class="icon-btn" type="button" aria-label="上個月">‹</button>
+        <button id="monthBtn" class="month-btn" type="button">
+          <span id="monthLabel">—</span>
+        </button>
+        <button id="nextMonth" class="icon-btn" type="button" aria-label="下個月">›</button>
+      </div>
+    </header>
+
+    <main>
+      <!-- 本月 -->
+      <section id="view-month" class="view">
+        <div class="hero">
+          <div class="hero-top">
+            <span class="hero-label">本月應繳合計</span>
+            <span id="heroBadge" class="badge"></span>
+          </div>
+          <div class="hero-amount"><span id="totalAmount">0</span><small>元</small></div>
+          <div class="progress"><i id="progressBar"></i></div>
+          <div class="hero-grid">
+            <div><span class="k">已繳</span><b id="paidAmount" class="paid">0</b></div>
+            <div><span class="k">未繳</span><b id="unpaidAmount" class="unpaid">0</b></div>
+            <div><span class="k">筆數</span><b id="itemCount">0</b></div>
+          </div>
+          <div id="heroWarn" class="hero-warn" hidden></div>
+        </div>
+
+        <section class="block">
+          <div class="block-head">
+            <h2>信用卡 <span id="cardSum" class="sum"></span></h2>
+            <button class="ghost-btn" id="fillCardsBtn" type="button" hidden>建立本月卡片</button>
+          </div>
+          <ul id="cardList" class="list"></ul>
+        </section>
+
+        <section class="block">
+          <div class="block-head">
+            <h2>其他帳單 <span id="otherSum" class="sum"></span></h2>
+            <button class="ghost-btn" id="addOtherBtn" type="button">＋ 新增</button>
+          </div>
+          <div id="templateBar" class="template-bar" hidden></div>
+          <ul id="otherList" class="list"></ul>
+        </section>
+
+        <section class="block" id="instBlock" hidden>
+          <div class="block-head"><h2>分期進度</h2></div>
+          <ul id="instList" class="inst-list"></ul>
+        </section>
+      </section>
+
+      <!-- 年度 -->
+      <section id="view-year" class="view" hidden>
+        <div class="block">
+          <div class="block-head">
+            <h2>年度總覽</h2>
+            <select id="yearSelect" class="select"></select>
+          </div>
+          <div class="stat-row" id="yearStats"></div>
+          <div id="yearChart" class="chart"></div>
+        </div>
+        <div class="block">
+          <div class="block-head"><h2>信用卡年度合計</h2></div>
+          <ul id="cardRank" class="rank-list"></ul>
+        </div>
+        <div class="block">
+          <div class="block-head"><h2>其他帳單年度合計</h2></div>
+          <ul id="otherRank" class="rank-list"></ul>
+        </div>
+      </section>
+
+      <!-- 設定 -->
+      <section id="view-settings" class="view" hidden>
+        <div class="block">
+          <div class="block-head"><h2>跨裝置同步</h2></div>
+          <div id="syncPanel" class="panel">
+            <p class="hint">
+              用一組「同步碼」把資料加密後存到雲端。其他裝置輸入同一組碼，就會看到同一份帳本。
+              同步碼遺失就無法解開雲端資料，請務必記下來。
+            </p>
+            <div class="field">
+              <label for="syncCode">同步碼</label>
+              <div class="input-row">
+                <input id="syncCode" class="input" type="text" inputmode="text" autocomplete="off" placeholder="XXXX-XXXX-XXXX" />
+                <button id="genCodeBtn" class="ghost-btn" type="button">產生</button>
+              </div>
+            </div>
+            <div class="btn-row">
+              <button id="enableSyncBtn" class="primary-btn" type="button">開啟同步</button>
+              <button id="syncNowBtn" class="ghost-btn" type="button">立即同步</button>
+              <button id="disableSyncBtn" class="ghost-btn danger" type="button">關閉</button>
+            </div>
+            <p id="syncStatus" class="hint"></p>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="block-head"><h2>資料</h2></div>
+          <div class="panel">
+            <div class="btn-row">
+              <button id="exportBtn" class="ghost-btn" type="button">匯出 JSON</button>
+              <label class="ghost-btn" for="importFile">匯入 JSON</label>
+              <input id="importFile" type="file" accept="application/json,.json" hidden />
+              <button id="resetBtn" class="ghost-btn danger" type="button">還原示範資料</button>
+            </div>
+            <p id="dataInfo" class="hint"></p>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="block-head"><h2>固定項目</h2></div>
+          <p class="hint">每月／每年會自動出現在「新增」選單，按一下就能帶入當月。</p>
+          <ul id="templateList" class="rank-list"></ul>
+        </div>
+
+        <div class="block">
+          <div class="block-head"><h2>關於</h2></div>
+          <p class="hint">
+            離線可用、資料存在這台裝置；開啟同步後才會上傳加密後的備份。
+            金額空白代表原始備忘錄沒寫，圖表以 0 計算。
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <nav class="tabbar">
+      <button class="tab is-active" data-view="month" type="button">
+        <span class="tab-ico">▤</span><span>本月</span>
+      </button>
+      <button class="tab" data-view="year" type="button">
+        <span class="tab-ico">▦</span><span>年度</span>
+      </button>
+      <button class="tab" data-view="settings" type="button">
+        <span class="tab-ico">⚙</span><span>設定</span>
+      </button>
+    </nav>
+
+    <dialog id="editor" class="sheet">
+      <form id="editorForm" method="dialog">
+        <div class="sheet-head">
+          <h3 id="editorTitle">編輯</h3>
+          <button type="button" class="icon-btn" id="editorClose" aria-label="關閉">✕</button>
+        </div>
+        <div class="sheet-body">
+          <div class="field" id="nameField">
+            <label for="fName">名稱</label>
+            <input id="fName" class="input" type="text" />
+          </div>
+          <div class="field">
+            <label for="fAmount">金額</label>
+            <input id="fAmount" class="input" type="number" inputmode="numeric" step="1" placeholder="空白 = 未填" />
+          </div>
+          <div class="two-col">
+            <div class="field">
+              <label for="fDue">繳款截止</label>
+              <input id="fDue" class="input" type="date" />
+            </div>
+            <div class="field">
+              <label for="fPaidDate">繳款日期</label>
+              <input id="fPaidDate" class="input" type="date" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="fVia">繳款方式</label>
+            <input id="fVia" class="input" type="text" list="viaList" placeholder="台銀、Richart、街口…" />
+            <datalist id="viaList">
+              <option value="台銀"></option>
+              <option value="玉山帳戶"></option>
+              <option value="中信"></option>
+              <option value="DAWHO"></option>
+              <option value="Richart"></option>
+              <option value="NEWNEW"></option>
+              <option value="LineBank"></option>
+              <option value="街口帳戶"></option>
+              <option value="ipassmoney"></option>
+              <option value="曉君國泰"></option>
+              <option value="聯邦"></option>
+              <option value="台新"></option>
+            </datalist>
+          </div>
+          <div class="two-col" id="instFields">
+            <div class="field">
+              <label for="fInstCur">已繳期數</label>
+              <input id="fInstCur" class="input" type="number" min="0" step="1" />
+            </div>
+            <div class="field">
+              <label for="fInstTotal">總期數</label>
+              <input id="fInstTotal" class="input" type="number" min="1" step="1" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="fNote">備註</label>
+            <textarea id="fNote" class="input" rows="2"></textarea>
+          </div>
+          <label class="check-row" id="paidRow">
+            <input id="fPaid" type="checkbox" />
+            <span>已繳款</span>
+          </label>
+        </div>
+        <div class="sheet-foot">
+          <button id="deleteBtn" class="ghost-btn danger" type="button">刪除</button>
+          <div class="spacer"></div>
+          <button class="ghost-btn" type="button" id="cancelBtn">取消</button>
+          <button class="primary-btn" type="submit">儲存</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script type="module" src="js/app.js"></script>
+  </body>
+</html>

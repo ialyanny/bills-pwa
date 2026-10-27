@@ -1,0 +1,15 @@
+# 系統
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# 編輯器
+.vscode/
+.idea/
+
+# 依賴與日誌
+node_modules/
+*.log
+
+# 匯出的備份（含真實帳務資料，不要進版控）
+帳單備忘錄-*.json
