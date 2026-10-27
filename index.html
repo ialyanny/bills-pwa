@@ -60,6 +60,24 @@
           <div id="heroWarn" class="hero-warn" hidden></div>
         </div>
 
+        <div class="toolbar">
+          <input id="searchInput" class="input toolbar-search" type="search" placeholder="搜尋卡片、帳單、扣款方式…" />
+          <div class="toolbar-row">
+            <div class="filter-chips" id="filterChips">
+              <button class="filter-chip is-active" data-filter="all" type="button">全部</button>
+              <button class="filter-chip" data-filter="unpaid" type="button">未繳</button>
+              <button class="filter-chip" data-filter="paid" type="button">已繳</button>
+              <button class="filter-chip" data-filter="unknown" type="button">待確認</button>
+            </div>
+            <select id="sortSelect" class="select" aria-label="排序方式">
+              <option value="default">預設順序</option>
+              <option value="due">截止日優先</option>
+              <option value="amount-desc">金額高→低</option>
+              <option value="amount-asc">金額低→高</option>
+            </select>
+          </div>
+        </div>
+
         <section class="block">
           <div class="block-head">
             <h2>信用卡 <span id="cardSum" class="sum"></span></h2>
@@ -142,9 +160,29 @@
         </div>
 
         <div class="block">
-          <div class="block-head"><h2>固定項目</h2></div>
-          <p class="hint">每月／每年會自動出現在「新增」選單，按一下就能帶入當月。</p>
+          <div class="block-head">
+            <h2>信用卡設定</h2>
+            <button id="addCardMetaBtn" class="ghost-btn" type="button">＋ 新增卡片</button>
+          </div>
+          <p class="hint" style="padding:0 12px">設定結帳日、繳款截止日與預設扣款方式，建立新月份時會自動推算日期。</p>
+          <ul id="cardMetaList" class="rank-list"></ul>
+        </div>
+
+        <div class="block">
+          <div class="block-head">
+            <h2>固定項目範本</h2>
+            <button id="addTemplateBtn" class="ghost-btn" type="button">＋ 新增範本</button>
+          </div>
+          <p class="hint" style="padding:0 12px">每月／每年會自動出現在當月「新增」快捷列，按一下就能帶入當月。</p>
           <ul id="templateList" class="rank-list"></ul>
+        </div>
+
+        <div class="block">
+          <div class="block-head">
+            <h2>待確認與疑點核對 <span id="issueCount" class="sum"></span></h2>
+          </div>
+          <p class="hint" style="padding:0 12px">原始手寫備忘錄中金額空白或有疑點的項目，點一下可直接跳轉補齊。</p>
+          <ul id="issueList" class="list"></ul>
         </div>
 
         <div class="block">
@@ -235,6 +273,111 @@
           <button id="deleteBtn" class="ghost-btn danger" type="button">刪除</button>
           <div class="spacer"></div>
           <button class="ghost-btn" type="button" id="cancelBtn">取消</button>
+          <button class="primary-btn" type="submit">儲存</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="cardEditor" class="sheet">
+      <form id="cardEditorForm" method="dialog">
+        <div class="sheet-head">
+          <h3 id="cardEditorTitle">編輯信用卡</h3>
+          <button type="button" class="icon-btn" id="cardEditorClose" aria-label="關閉">✕</button>
+        </div>
+        <div class="sheet-body">
+          <div class="two-col">
+            <div class="field">
+              <label for="cName">卡片名稱</label>
+              <input id="cName" class="input" type="text" placeholder="例如：富邦、玉山" required />
+            </div>
+            <div class="field">
+              <label for="cOwner">持卡人</label>
+              <input id="cOwner" class="input" type="text" placeholder="本人 / 老婆" />
+            </div>
+          </div>
+          <div class="two-col">
+            <div class="field">
+              <label for="cStmtDay">每月結帳日（1~31）</label>
+              <input id="cStmtDay" class="input" type="number" min="1" max="31" step="1" placeholder="例如 24" />
+            </div>
+            <div class="field">
+              <label for="cDueDay">每月截止日（1~31）</label>
+              <input id="cDueDay" class="input" type="number" min="1" max="31" step="1" placeholder="例如 9" />
+            </div>
+          </div>
+          <div class="two-col">
+            <div class="field">
+              <label for="cVia">預設扣款方式</label>
+              <input id="cVia" class="input" type="text" list="viaList" placeholder="台銀、Richart…" />
+            </div>
+            <div class="field">
+              <label for="cColor">代表色</label>
+              <input id="cColor" class="input" type="color" value="#2563eb" style="height:41px;padding:4px 8px" />
+            </div>
+          </div>
+        </div>
+        <div class="sheet-foot">
+          <button id="cardDeleteBtn" class="ghost-btn danger" type="button">刪除</button>
+          <div class="spacer"></div>
+          <button class="ghost-btn" type="button" id="cardCancelBtn">取消</button>
+          <button class="primary-btn" type="submit">儲存</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="tplEditor" class="sheet">
+      <form id="tplEditorForm" method="dialog">
+        <div class="sheet-head">
+          <h3 id="tplEditorTitle">編輯固定項目</h3>
+          <button type="button" class="icon-btn" id="tplEditorClose" aria-label="關閉">✕</button>
+        </div>
+        <div class="sheet-body">
+          <div class="field">
+            <label for="tName">項目名稱</label>
+            <input id="tName" class="input" type="text" placeholder="例如：房貸、電費" required />
+          </div>
+          <div class="two-col">
+            <div class="field">
+              <label for="tAmount">預設金額</label>
+              <input id="tAmount" class="input" type="number" step="1" placeholder="空白 = 每月變動" />
+            </div>
+            <div class="field">
+              <label for="tDueDay">每月截止日（1~31）</label>
+              <input id="tDueDay" class="input" type="number" min="1" max="31" step="1" placeholder="選填" />
+            </div>
+          </div>
+          <div class="two-col">
+            <div class="field">
+              <label for="tRecurrence">週期</label>
+              <select id="tRecurrence" class="input">
+                <option value="monthly">每月固定</option>
+                <option value="yearly">每年固定（指定月份）</option>
+              </select>
+            </div>
+            <div class="field" id="tMonthField" hidden>
+              <label for="tMonth">指定月份（1~12）</label>
+              <input id="tMonth" class="input" type="number" min="1" max="12" step="1" value="6" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="tVia">預設繳款方式</label>
+            <input id="tVia" class="input" type="text" list="viaList" placeholder="街口帳戶、轉帳…" />
+          </div>
+          <div class="two-col">
+            <div class="field">
+              <label for="tInstCur">基準已繳期數（選填）</label>
+              <input id="tInstCur" class="input" type="number" min="0" step="1" />
+            </div>
+            <div class="field">
+              <label for="tInstTotal">總期數（選填）</label>
+              <input id="tInstTotal" class="input" type="number" min="1" step="1" />
+            </div>
+          </div>
+        </div>
+        <div class="sheet-foot">
+          <button id="tplDeleteBtn" class="ghost-btn danger" type="button">刪除</button>
+          <div class="spacer"></div>
+          <button class="ghost-btn" type="button" id="tplCancelBtn">取消</button>
           <button class="primary-btn" type="submit">儲存</button>
         </div>
       </form>

@@ -119,10 +119,10 @@ export const SEED = {
       "dueDay": null,
       "via": "聯邦",
       "recurrence": "monthly",
-      "inst": [
-        44,
-        72
-      ]
+      "inst": {
+        "cur": 45,
+        "total": 72
+      }
     },
     {
       "id": "t04",
@@ -131,10 +131,10 @@ export const SEED = {
       "dueDay": null,
       "via": "台新",
       "recurrence": "monthly",
-      "inst": [
-        11,
-        84
-      ]
+      "inst": {
+        "cur": 12,
+        "total": 84
+      }
     },
     {
       "id": "t05",
@@ -274,6 +274,240 @@ export const SEED = {
     }
   ],
   "months": {
+    "2026-11": {
+      "cards": {
+        "fubon": {
+          "amount": null,
+          "stmtDate": "2026-10-24",
+          "dueDate": "2026-11-09",
+          "paid": false,
+          "paidDate": null,
+          "via": "台銀",
+          "note": ""
+        },
+        "yushan": {
+          "amount": null,
+          "stmtDate": "2026-10-27",
+          "dueDate": "2026-11-13",
+          "paid": false,
+          "paidDate": null,
+          "via": "玉山帳戶",
+          "note": ""
+        },
+        "ctc": {
+          "amount": null,
+          "stmtDate": "2026-10-17",
+          "dueDate": "2026-11-05",
+          "paid": false,
+          "paidDate": null,
+          "via": "台銀",
+          "note": ""
+        },
+        "yongfeng": {
+          "amount": null,
+          "stmtDate": "2026-10-18",
+          "dueDate": "2026-11-03",
+          "paid": false,
+          "paidDate": null,
+          "via": "DAWHO",
+          "note": ""
+        },
+        "taishin": {
+          "amount": null,
+          "stmtDate": "2026-10-15",
+          "dueDate": "2026-11-27",
+          "paid": false,
+          "paidDate": null,
+          "via": "Richart",
+          "note": ""
+        },
+        "union": {
+          "amount": null,
+          "stmtDate": "2026-10-06",
+          "dueDate": "2026-11-21",
+          "paid": false,
+          "paidDate": null,
+          "via": "NEWNEW",
+          "note": ""
+        },
+        "dbs": {
+          "amount": null,
+          "stmtDate": "2026-10-07",
+          "dueDate": "2026-11-27",
+          "paid": false,
+          "paidDate": null,
+          "via": "台銀",
+          "note": ""
+        },
+        "scb": {
+          "amount": null,
+          "stmtDate": "2026-10-16",
+          "dueDate": "2026-11-06",
+          "paid": false,
+          "paidDate": null,
+          "via": "LineBank",
+          "note": ""
+        },
+        "wife_ctc": {
+          "amount": null,
+          "stmtDate": "2026-10-14",
+          "dueDate": null,
+          "paid": false,
+          "paidDate": null,
+          "via": "曉君國泰",
+          "note": ""
+        },
+        "wife_yushan": {
+          "amount": null,
+          "stmtDate": "2026-10-27",
+          "dueDate": null,
+          "paid": false,
+          "paidDate": null,
+          "via": "玉山帳戶",
+          "note": ""
+        }
+      },
+      "others": [
+        {
+          "id": "o20261101",
+          "name": "遠傳電話費",
+          "amount": 1258,
+          "dueDate": "2026-11-28",
+          "paid": false,
+          "paidDate": null,
+          "via": "",
+          "note": "",
+          "inst": null
+        },
+        {
+          "id": "o20261102",
+          "name": "宸麟電話費",
+          "amount": 376,
+          "dueDate": "2026-11-22",
+          "paid": false,
+          "paidDate": null,
+          "via": "",
+          "note": "",
+          "inst": null
+        },
+        {
+          "id": "o20261103",
+          "name": "9733聯邦信貸",
+          "amount": 9733,
+          "dueDate": null,
+          "paid": false,
+          "paidDate": null,
+          "via": "聯邦",
+          "note": "",
+          "inst": {
+            "cur": 45,
+            "total": 72
+          }
+        },
+        {
+          "id": "o20261104",
+          "name": "24213台新信貸",
+          "amount": 24213,
+          "dueDate": null,
+          "paid": false,
+          "paidDate": null,
+          "via": "台新",
+          "note": "",
+          "inst": {
+            "cur": 12,
+            "total": 84
+          }
+        },
+        {
+          "id": "o20261105",
+          "name": "房貸",
+          "amount": 40000,
+          "dueDate": null,
+          "paid": false,
+          "paidDate": null,
+          "via": "轉帳",
+          "note": "",
+          "inst": null
+        },
+        {
+          "id": "o20261106",
+          "name": "妹妹數學",
+          "amount": null,
+          "dueDate": null,
+          "paid": false,
+          "paidDate": null,
+          "via": "",
+          "note": "",
+          "inst": null
+        },
+        {
+          "id": "o20261107",
+          "name": "妹妹威林",
+          "amount": null,
+          "dueDate": null,
+          "paid": false,
+          "paidDate": null,
+          "via": "",
+          "note": "",
+          "inst": null
+        },
+        {
+          "id": "o20261108",
+          "name": "宸麟數學",
+          "amount": 5600,
+          "dueDate": null,
+          "paid": false,
+          "paidDate": null,
+          "via": "",
+          "note": "",
+          "inst": null
+        },
+        {
+          "id": "o20261109",
+          "name": "宸麟威林",
+          "amount": 5100,
+          "dueDate": null,
+          "paid": false,
+          "paidDate": null,
+          "via": "",
+          "note": "",
+          "inst": null
+        },
+        {
+          "id": "o20261110",
+          "name": "宸麟家教",
+          "amount": 5600,
+          "dueDate": null,
+          "paid": false,
+          "paidDate": null,
+          "via": "",
+          "note": "",
+          "inst": null
+        },
+        {
+          "id": "o20261111",
+          "name": "電費",
+          "amount": null,
+          "dueDate": null,
+          "paid": false,
+          "paidDate": null,
+          "via": "街口帳戶",
+          "note": "",
+          "inst": null
+        },
+        {
+          "id": "o20261112",
+          "name": "水費",
+          "amount": null,
+          "dueDate": "2026-11-01",
+          "paid": false,
+          "paidDate": null,
+          "via": "街口帳戶",
+          "note": "",
+          "inst": null
+        }
+      ]
+    },
     "2026-10": {
       "cards": {
         "fubon": {

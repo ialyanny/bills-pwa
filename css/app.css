@@ -403,6 +403,59 @@ main {
   color: #bbf7d0;
 }
 
+/* ---------- 搜尋與篩選列 ---------- */
+.toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toolbar-search {
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  padding: 9px 13px;
+}
+
+.toolbar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.filter-chip {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 4px 11px;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.filter-chip.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.tpl-chip.is-all {
+  background: var(--accent);
+  border-style: solid;
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
 /* ---------- 區塊 ---------- */
 .block {
   background: var(--surface);

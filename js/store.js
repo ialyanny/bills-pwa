@@ -24,7 +24,8 @@ function defaultSettings() {
 export function defaultState() {
   const st = clone(SEED);
   const months = Object.keys(st.months).sort();
-  st.activeMonth = months[months.length - 1] || ymNow();
+  const now = ymNow();
+  st.activeMonth = st.months[now] ? now : months[months.length - 1] || now;
   st.settings = defaultSettings();
   st.updatedAt = new Date().toISOString();
   return st;

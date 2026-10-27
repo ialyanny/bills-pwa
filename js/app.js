@@ -11,6 +11,8 @@ import {
   buildCardEntries,
   cardEntries,
   otherEntries,
+  filterAndSortEntries,
+  pendingIssues,
   statusOf,
   STATUS_TEXT,
   todayStr,
@@ -26,6 +28,11 @@ const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const TODAY = todayStr();
 let view = 'month';
 let editing = null; // { kind, key }
+let editingCardId = null;
+let editingTplId = null;
+let searchQuery = '';
+let activeFilter = 'all';
+let activeSort = 'default';
 let installPrompt = null;
 let syncMsg = '';
 
@@ -141,9 +148,26 @@ function renderCards(st, ym, exists, s) {
     return;
   }
 
-  list.innerHTML = st.cards
-    .map((c) => {
-      const item = st.months[ym].cards[c.id];
+  const rawEntries = st.cards.map((c) => ({
+    kind: 'card',
+    key: c.id,
+    meta: c,
+    item: st.months[ym].cards[c.id] || null,
+  }));
+  const entries = filterAndSortEntries(rawEntries, {
+    query: searchQuery,
+    filter: activeFilter,
+    sort: activeSort,
+    today: TODAY,
+  });
+
+  if (!entries.length) {
+    list.innerHTML = '<li class="row" style="cursor:default"><div class="row-main"><div class="row-sub">沒有符合篩選條件的信用卡</div></div></li>';
+    return;
+  }
+
+  list.innerHTML = entries
+    .map(({ meta: c, item }) => {
       if (!item) {
         return `<li class="row" data-kind="card" data-id="${c.id}">
           <button class="tick" data-tick="1" aria-label="標記已繳">✓</button>
@@ -177,23 +201,36 @@ function renderOthers(st, ym, exists, s) {
 
   if (!exists || !st.months[ym].others.length) {
     list.innerHTML = `<li class="row" style="cursor:default">
-      <div class="row-main"><div class="row-sub">還沒有其他帳單，按右上角「＋ 新增」</div></div>
+      <div class="row-main"><div class="row-sub">還沒有其他帳單，按右上角「＋ 新增」或下方固定項目帶入</div></div>
     </li>`;
   } else {
-    list.innerHTML = st.months[ym].others
-      .map(
-        (o) => `<li class="row ${o.paid ? 'is-paid' : ''}" data-kind="other" data-id="${o.id}">
-        <button class="tick ${o.paid ? 'on' : ''}" data-tick="1" aria-label="切換已繳">✓</button>
-        <div class="row-main">
-          <div class="row-title">${escapeHtml(o.name)} ${chipFor(o)}</div>
-          <div class="row-sub">${subLine(o)}</div>
-        </div>
-        <div class="row-right">
-          <span class="row-amount ${o.amount == null ? 'is-null' : ''}">${fmtMoney(o.amount)}</span>
-        </div>
-      </li>`,
-      )
-      .join('');
+    const rawEntries = st.months[ym].others.map((o) => ({ kind: 'other', key: o.id, meta: null, item: o }));
+    const entries = filterAndSortEntries(rawEntries, {
+      query: searchQuery,
+      filter: activeFilter,
+      sort: activeSort,
+      today: TODAY,
+    });
+    if (!entries.length) {
+      list.innerHTML = `<li class="row" style="cursor:default">
+        <div class="row-main"><div class="row-sub">沒有符合篩選條件的帳單</div></div>
+      </li>`;
+    } else {
+      list.innerHTML = entries
+        .map(
+          ({ item: o }) => `<li class="row ${o.paid ? 'is-paid' : ''}" data-kind="other" data-id="${o.id}">
+          <button class="tick ${o.paid ? 'on' : ''}" data-tick="1" aria-label="切換已繳">✓</button>
+          <div class="row-main">
+            <div class="row-title">${escapeHtml(o.name)} ${chipFor(o)}</div>
+            <div class="row-sub">${subLine(o)}</div>
+          </div>
+          <div class="row-right">
+            <span class="row-amount ${o.amount == null ? 'is-null' : ''}">${fmtMoney(o.amount)}</span>
+          </div>
+        </li>`,
+        )
+        .join('');
+    }
   }
 
   renderTemplates(st, ym);
@@ -208,10 +245,16 @@ function renderTemplates(st, ym) {
     return;
   }
   bar.hidden = false;
-  bar.innerHTML = missing
-    .slice(0, 12)
-    .map((t) => `<button class="tpl-chip" data-tpl="${t.id}">＋ ${escapeHtml(t.name)}</button>`)
-    .join('');
+  const allBtn =
+    missing.length > 1
+      ? `<button class="tpl-chip is-all" data-tpl="__all__" type="button">＋ 全部帶入 (${missing.length})</button>`
+      : '';
+  bar.innerHTML =
+    allBtn +
+    missing
+      .slice(0, 15)
+      .map((t) => `<button class="tpl-chip" data-tpl="${t.id}" type="button">＋ ${escapeHtml(t.name)}</button>`)
+      .join('');
 }
 
 function renderInstallments(st) {
@@ -312,6 +355,16 @@ function renderSettings() {
   $('#dataInfo').textContent = `${monthCount} 個月 · ${itemCount} 筆紀錄 · 本機約 ${(bytes / 1024).toFixed(1)} KB`;
   updateSyncUI();
 
+  $('#cardMetaList').innerHTML = st.cards
+    .map(
+      (c) => `<li class="rank-row" style="grid-template-columns:1fr auto auto">
+        <span style="display:flex;align-items:center;gap:6px"><i class="dot" style="background:${c.color}"></i>${escapeHtml(c.name)} <small style="color:var(--muted)">(${escapeHtml(c.owner || '本人')})</small></span>
+        <span class="rank-val">${c.stmtDay ? `${c.stmtDay} 結` : ''}${c.dueDay ? ` / ${c.dueDay} 止` : ''}${c.via ? ` · ${escapeHtml(c.via)}` : ''}</span>
+        <button class="ghost-btn" data-edit-card="${c.id}" style="padding:2px 8px;font-size:12px" type="button">編輯</button>
+      </li>`,
+    )
+    .join('');
+
   $('#templateList').innerHTML = st.templates
     .map(
       (t) => `<li class="rank-row" style="grid-template-columns:1fr auto auto">
@@ -319,10 +372,28 @@ function renderSettings() {
         <span class="rank-val">${t.recurrence === 'yearly' ? `${t.month} 月` : '每月'}${
           t.amount ? ` · ${fmtMoney(t.amount)}` : ''
         }</span>
-        <button class="ghost-btn" data-del-tpl="${t.id}" style="padding:2px 8px;font-size:12px">移除</button>
+        <button class="ghost-btn" data-edit-tpl="${t.id}" style="padding:2px 8px;font-size:12px" type="button">編輯</button>
       </li>`,
     )
     .join('');
+
+  const issues = pendingIssues(st);
+  $('#issueCount').textContent = issues.length ? `共 ${issues.length} 筆` : '已全部確認';
+  $('#issueList').innerHTML = issues.length
+    ? issues
+        .map(
+          (it) => `<li class="row" data-issue-ym="${it.ym}" data-issue-kind="${it.kind}" data-issue-key="${it.key}">
+          <div class="row-main">
+            <div class="row-title"><span class="chip ${it.amount == null ? 'unknown' : 'soon'}">${escapeHtml(it.ym)}</span> ${escapeHtml(it.name)}</div>
+            <div class="row-sub">${escapeHtml(it.note)}</div>
+          </div>
+          <div class="row-right">
+            <span class="row-amount ${it.amount == null ? 'is-null' : ''}">${fmtMoney(it.amount)}</span>
+          </div>
+        </li>`,
+        )
+        .join('')
+    : '<li class="row" style="cursor:default"><div class="row-main"><div class="row-sub">沒有待確認或標記疑點的項目</div></div></li>';
 }
 
 const SYNC_TEXT = {
@@ -484,14 +555,127 @@ function togglePaid(kind, key) {
 function addFromTemplate(id) {
   const st = state();
   const ym = currentMonth();
+  if (id === '__all__') {
+    const missing = missingTemplates(st, ym);
+    if (!missing.length) return;
+    store.commit((s) => {
+      s.months[ym] = s.months[ym] || { cards: buildCardEntries(s.cards, ym), others: [] };
+      for (const tpl of missing) {
+        s.months[ym].others.push(entryFromTemplate(tpl, ym, s));
+      }
+    }, 'edit');
+    toast(`已帶入 ${missing.length} 筆固定項目`);
+    return;
+  }
   const tpl = st.templates.find((t) => t.id === id);
   if (!tpl) return;
-  const entry = entryFromTemplate(tpl, ym);
+  const entry = entryFromTemplate(tpl, ym, st);
   store.commit((s) => {
     s.months[ym] = s.months[ym] || { cards: buildCardEntries(s.cards, ym), others: [] };
     s.months[ym].others.push(entry);
   }, 'edit');
   toast(`已帶入 ${tpl.name}`);
+}
+
+/* 信用卡主檔與固定範本編輯 */
+function openCardMetaEditor(id = null) {
+  const st = state();
+  editingCardId = id;
+  const card = id ? st.cards.find((c) => c.id === id) : null;
+  $('#cardEditorTitle').textContent = card ? `編輯信用卡：${card.name}` : '新增信用卡';
+  $('#cName').value = card?.name || '';
+  $('#cOwner').value = card?.owner || '本人';
+  $('#cStmtDay').value = card?.stmtDay ?? '';
+  $('#cDueDay').value = card?.dueDay ?? '';
+  $('#cVia').value = card?.via || '';
+  $('#cColor').value = card?.color || '#2563eb';
+  $('#cardDeleteBtn').hidden = !card;
+  $('#cardEditor').showModal();
+}
+
+function saveCardMetaEditor(ev) {
+  ev.preventDefault();
+  const name = $('#cName').value.trim();
+  if (!name) return;
+  const stmtRaw = $('#cStmtDay').value.trim();
+  const dueRaw = $('#cDueDay').value.trim();
+  const payload = {
+    name,
+    owner: $('#cOwner').value.trim() || '本人',
+    stmtDay: stmtRaw ? Number(stmtRaw) : null,
+    dueDay: dueRaw ? Number(dueRaw) : null,
+    via: $('#cVia').value.trim(),
+    color: $('#cColor').value || '#2563eb',
+  };
+  store.commit((s) => {
+    if (editingCardId) {
+      const idx = s.cards.findIndex((c) => c.id === editingCardId);
+      if (idx >= 0) s.cards[idx] = { ...s.cards[idx], ...payload };
+    } else {
+      const newCard = { id: store.uid('c'), ...payload };
+      s.cards.push(newCard);
+      const ym = s.activeMonth;
+      if (s.months[ym]) {
+        const built = buildCardEntries([newCard], ym);
+        s.months[ym].cards[newCard.id] = built[newCard.id];
+      }
+    }
+  }, 'edit');
+  $('#cardEditor').close();
+  editingCardId = null;
+  toast('已儲存信用卡設定');
+}
+
+function openTplEditor(id = null) {
+  const st = state();
+  editingTplId = id;
+  const tpl = id ? st.templates.find((t) => t.id === id) : null;
+  $('#tplEditorTitle').textContent = tpl ? `編輯固定項目：${tpl.name}` : '新增固定項目';
+  $('#tName').value = tpl?.name || '';
+  $('#tAmount').value = tpl?.amount ?? '';
+  $('#tDueDay').value = tpl?.dueDay ?? '';
+  $('#tRecurrence').value = tpl?.recurrence || 'monthly';
+  $('#tMonthField').hidden = $('#tRecurrence').value !== 'yearly';
+  $('#tMonth').value = tpl?.month ?? 6;
+  $('#tVia').value = tpl?.via || '';
+  const instCur = Array.isArray(tpl?.inst) ? tpl.inst[0] : tpl?.inst?.cur;
+  const instTotal = Array.isArray(tpl?.inst) ? tpl.inst[1] : tpl?.inst?.total;
+  $('#tInstCur').value = instCur ?? '';
+  $('#tInstTotal').value = instTotal ?? '';
+  $('#tplDeleteBtn').hidden = !tpl;
+  $('#tplEditor').showModal();
+}
+
+function saveTplEditor(ev) {
+  ev.preventDefault();
+  const name = $('#tName').value.trim();
+  if (!name) return;
+  const amtRaw = $('#tAmount').value.trim();
+  const dueRaw = $('#tDueDay').value.trim();
+  const recurrence = $('#tRecurrence').value;
+  const monthRaw = $('#tMonth').value.trim();
+  const instCur = $('#tInstCur').value.trim();
+  const instTotal = $('#tInstTotal').value.trim();
+  const payload = {
+    name,
+    amount: amtRaw === '' ? null : Number(amtRaw),
+    dueDay: dueRaw === '' ? null : Number(dueRaw),
+    recurrence,
+    ...(recurrence === 'yearly' ? { month: Number(monthRaw || 1) } : {}),
+    via: $('#tVia').value.trim(),
+    ...(instCur && instTotal ? { inst: { cur: Number(instCur), total: Number(instTotal) } } : { inst: null }),
+  };
+  store.commit((s) => {
+    if (editingTplId) {
+      const idx = s.templates.findIndex((t) => t.id === editingTplId);
+      if (idx >= 0) s.templates[idx] = { ...s.templates[idx], ...payload };
+    } else {
+      s.templates.push({ id: store.uid('t'), ...payload });
+    }
+  }, 'edit');
+  $('#tplEditor').close();
+  editingTplId = null;
+  toast('已儲存固定項目');
 }
 
 function createMonthCards() {
@@ -606,6 +790,22 @@ function bind() {
   $('#addOtherBtn').addEventListener('click', () => openEditor('other', null));
   $('#fillCardsBtn').addEventListener('click', createMonthCards);
 
+  $('#searchInput').addEventListener('input', (ev) => {
+    searchQuery = ev.target.value;
+    renderMonth();
+  });
+  $('#filterChips').addEventListener('click', (ev) => {
+    const btn = ev.target.closest('[data-filter]');
+    if (!btn) return;
+    activeFilter = btn.dataset.filter;
+    $$('#filterChips .filter-chip').forEach((b) => b.classList.toggle('is-active', b === btn));
+    renderMonth();
+  });
+  $('#sortSelect').addEventListener('change', (ev) => {
+    activeSort = ev.target.value;
+    renderMonth();
+  });
+
   $('#editorForm').addEventListener('submit', saveEditor);
   $('#cancelBtn').addEventListener('click', closeEditor);
   $('#editorClose').addEventListener('click', closeEditor);
@@ -695,20 +895,62 @@ function bind() {
   });
 
   $('#resetBtn').addEventListener('click', () => {
-    if (!confirm('會覆蓋目前所有資料，回到 1～10 月示範資料。建議先匯出。確定？')) return;
+    if (!confirm('會覆蓋目前所有資料，回到 1～11 月示範資料。建議先匯出。確定？')) return;
     store.resetToSeed();
     toast('已還原示範資料');
     renderAll();
   });
 
+  $('#addCardMetaBtn').addEventListener('click', () => openCardMetaEditor(null));
+  $('#cardMetaList').addEventListener('click', (ev) => {
+    const btn = ev.target.closest('[data-edit-card]');
+    if (btn) openCardMetaEditor(btn.dataset.editCard);
+  });
+  $('#cardEditorForm').addEventListener('submit', saveCardMetaEditor);
+  $('#cardCancelBtn').addEventListener('click', () => $('#cardEditor').close());
+  $('#cardEditorClose').addEventListener('click', () => $('#cardEditor').close());
+  $('#cardDeleteBtn').addEventListener('click', () => {
+    if (!editingCardId) return;
+    if (!confirm('確定從主檔移除這張信用卡？各月已記錄的帳單仍會保留。')) return;
+    store.commit((s) => {
+      s.cards = s.cards.filter((c) => c.id !== editingCardId);
+    }, 'edit');
+    $('#cardEditor').close();
+    editingCardId = null;
+    toast('已移除信用卡');
+  });
+
+  $('#addTemplateBtn').addEventListener('click', () => openTplEditor(null));
   $('#templateList').addEventListener('click', (ev) => {
-    const btn = ev.target.closest('[data-del-tpl]');
-    if (!btn) return;
+    const btn = ev.target.closest('[data-edit-tpl]');
+    if (btn) openTplEditor(btn.dataset.editTpl);
+  });
+  $('#tRecurrence').addEventListener('change', (ev) => {
+    $('#tMonthField').hidden = ev.target.value !== 'yearly';
+  });
+  $('#tplEditorForm').addEventListener('submit', saveTplEditor);
+  $('#tplCancelBtn').addEventListener('click', () => $('#tplEditor').close());
+  $('#tplEditorClose').addEventListener('click', () => $('#tplEditor').close());
+  $('#tplDeleteBtn').addEventListener('click', () => {
+    if (!editingTplId) return;
     if (!confirm('從固定項目移除？已建立的帳單不受影響。')) return;
     store.commit((s) => {
-      s.templates = s.templates.filter((t) => t.id !== btn.dataset.delTpl);
+      s.templates = s.templates.filter((t) => t.id !== editingTplId);
     }, 'edit');
-    toast('已移除');
+    $('#tplEditor').close();
+    editingTplId = null;
+    toast('已移除固定項目');
+  });
+
+  $('#issueList').addEventListener('click', (ev) => {
+    const li = ev.target.closest('[data-issue-ym]');
+    if (!li) return;
+    const { issueYm, issueKind, issueKey } = li.dataset;
+    store.setActiveMonth(issueYm);
+    view = 'month';
+    $$('.tab').forEach((t) => t.classList.toggle('is-active', t.dataset.view === 'month'));
+    renderAll();
+    openEditor(issueKind, issueKey);
   });
 
   window.addEventListener(

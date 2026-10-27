@@ -150,8 +150,27 @@ export function appliesTo(tpl, ym) {
   return false;
 }
 
-export function entryFromTemplate(tpl, ym) {
+export function entryFromTemplate(tpl, ym, state = null) {
   const [y, m] = ym.split('-').map(Number);
+  let inst = tpl.inst ? { ...tpl.inst } : null;
+  if (inst && state?.months) {
+    let latestYm = null;
+    let latestCur = null;
+    for (const [k, mv] of Object.entries(state.months)) {
+      if (k < ym) {
+        const found = mv.others?.find((o) => o.name === tpl.name && o.inst?.cur);
+        if (found && (!latestYm || k > latestYm)) {
+          latestYm = k;
+          latestCur = found.inst.cur;
+        }
+      }
+    }
+    if (latestYm && latestCur != null) {
+      const [ly, lm] = latestYm.split('-').map(Number);
+      const diff = (y - ly) * 12 + (m - lm);
+      inst = { cur: Math.min(inst.total, latestCur + Math.max(1, diff)), total: inst.total };
+    }
+  }
   return {
     id: `t${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
     name: tpl.name,
@@ -161,8 +180,85 @@ export function entryFromTemplate(tpl, ym) {
     paidDate: null,
     via: tpl.via || '',
     note: '',
-    inst: tpl.inst ? { ...tpl.inst } : null,
+    inst,
   };
+}
+
+/** 篩選與排序清單項目 */
+export function filterAndSortEntries(entries, { query = '', filter = 'all', sort = 'default', today = todayStr() } = {}) {
+  const q = query.trim().toLowerCase();
+  const statusWeight = { overdue: 0, soon: 1, pending: 2, unknown: 3, paid: 4 };
+  const filtered = entries.filter((e) => {
+    const it = e.item;
+    if (!it) return filter === 'all' && !q;
+    const st = statusOf(it, today);
+    if (filter === 'unpaid' && it.paid) return false;
+    if (filter === 'paid' && !it.paid) return false;
+    if (filter === 'unknown' && st !== 'unknown') return false;
+    if (filter === 'overdue' && st !== 'overdue' && st !== 'soon') return false;
+    if (q) {
+      const name = (e.meta?.name || it.name || '').toLowerCase();
+      const via = (it.via || '').toLowerCase();
+      const note = (it.note || '').toLowerCase();
+      const amt = it.amount != null ? String(it.amount) : '';
+      if (!name.includes(q) && !via.includes(q) && !note.includes(q) && !amt.includes(q)) return false;
+    }
+    return true;
+  });
+
+  if (sort === 'default') return filtered;
+  return [...filtered].sort((a, b) => {
+    const ia = a.item || {};
+    const ib = b.item || {};
+    if (sort === 'due') {
+      const swA = statusWeight[statusOf(ia, today)] ?? 9;
+      const swB = statusWeight[statusOf(ib, today)] ?? 9;
+      if (swA !== swB) return swA - swB;
+      return String(ia.dueDate || '9999-99-99').localeCompare(String(ib.dueDate || '9999-99-99'));
+    }
+    if (sort === 'amount-desc') {
+      return num(ib.amount) - num(ia.amount);
+    }
+    if (sort === 'amount-asc') {
+      return num(ia.amount) - num(ib.amount);
+    }
+    return 0;
+  });
+}
+
+/** 掃描所有月份中金額空白（待確認）或有疑點的項目 */
+export function pendingIssues(state) {
+  const list = [];
+  for (const ym of Object.keys(state.months).sort().reverse()) {
+    const m = state.months[ym];
+    for (const c of state.cards) {
+      const item = m.cards[c.id];
+      if (!item) continue;
+      if (item.amount == null || /疑似|疑問|殘缺|原文/.test(item.note || '')) {
+        list.push({
+          ym,
+          kind: 'card',
+          key: c.id,
+          name: c.name,
+          amount: item.amount,
+          note: item.note || (item.amount == null ? '金額未填' : ''),
+        });
+      }
+    }
+    for (const o of m.others) {
+      if (o.amount == null || /疑似|疑問|殘缺|原文/.test(o.note || '')) {
+        list.push({
+          ym,
+          kind: 'other',
+          key: o.id,
+          name: o.name,
+          amount: o.amount,
+          note: o.note || (o.amount == null ? '金額未填' : ''),
+        });
+      }
+    }
+  }
+  return list;
 }
 
 /* ------------------------------------------------------------------ *

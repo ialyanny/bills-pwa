@@ -35,6 +35,35 @@ const CARDS = [
  *    o = 其他帳單：[名稱, 金額, { d:截止, p:繳款日, v:方式, n:備註, inst:[已繳期,總期] }]
  * ------------------------------------------------------------------ */
 const DATA = {
+  '2026-11': {
+    c: {
+      fubon:       [null, null],
+      yushan:      [null, null],
+      ctc:         [null, null],
+      yongfeng:    [null, null],
+      taishin:     [null, null],
+      union:       [null, null],
+      dbs:         [null, null],
+      scb:         [null, null],
+      wife_ctc:    [null, null],
+      wife_yushan: [null, null],
+    },
+    o: [
+      ['遠傳電話費', 1258, { d: '11-28' }],
+      ['宸麟電話費', 376,  { d: '11-22' }],
+      ['9733聯邦信貸', 9733, { v: '聯邦', inst: [45, 72] }],
+      ['24213台新信貸', 24213, { v: '台新', inst: [12, 84] }],
+      ['房貸', 40000, { v: '轉帳' }],
+      ['妹妹數學', null, {}],
+      ['妹妹威林', null, {}],
+      ['宸麟數學', 5600, {}],
+      ['宸麟威林', 5100, {}],
+      ['宸麟家教', 5600, {}],
+      ['電費', null, { v: '街口帳戶' }],
+      ['水費', null, { d: '11-01', v: '街口帳戶' }],
+    ],
+  },
+
   '2026-10': {
     c: {
       fubon:       [14903, '10-01'],
@@ -324,8 +353,8 @@ const DATA = {
 const TEMPLATES = [
   { name: '遠傳電話費', amount: 1258,  dueDay: 28, via: '',            recurrence: 'monthly' },
   { name: '宸麟電話費', amount: 376,   dueDay: 22, via: '',            recurrence: 'monthly' },
-  { name: '9733聯邦信貸', amount: 9733,  dueDay: null, via: '聯邦',    recurrence: 'monthly', inst: [44, 72] },
-  { name: '24213台新信貸', amount: 24213, dueDay: null, via: '台新',   recurrence: 'monthly', inst: [11, 84] },
+  { name: '9733聯邦信貸', amount: 9733,  dueDay: null, via: '聯邦',    recurrence: 'monthly', inst: [45, 72] },
+  { name: '24213台新信貸', amount: 24213, dueDay: null, via: '台新',   recurrence: 'monthly', inst: [12, 84] },
   { name: '房貸',       amount: 40000, dueDay: null, via: '轉帳',      recurrence: 'monthly' },
   { name: '電費',       amount: null,  dueDay: null, via: '街口帳戶',  recurrence: 'monthly' },
   { name: '水費',       amount: null,  dueDay: 1,    via: '街口帳戶',  recurrence: 'monthly' },
@@ -408,7 +437,11 @@ const seed = {
   version: 2,
   currency: 'TWD',
   cards: CARDS,
-  templates: TEMPLATES.map((t, i) => ({ id: `t${String(i + 1).padStart(2, '0')}`, ...t })),
+  templates: TEMPLATES.map((t, i) => ({
+    id: `t${String(i + 1).padStart(2, '0')}`,
+    ...t,
+    ...(Array.isArray(t.inst) ? { inst: { cur: t.inst[0], total: t.inst[1] } } : {}),
+  })),
   months,
   sourceNote: '原始資料：使用者 1～10 月手寫備忘錄（2026 年）。金額空白者以 null 表示，不推測。',
 };
