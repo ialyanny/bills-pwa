@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>帳單備忘錄</title>
+    <meta name="description" content="每月信用卡與固定帳單的繳款備忘錄，離線可用、跨裝置加密同步。" />
+    <meta name="theme-color" content="#0f172a" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="帳單" />
+    <link rel="stylesheet" href="css/app.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-row">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">帳</span>
+          <span class="brand-text">帳單備忘錄</span>
+        </div>
+        <button id="syncPill" class="sync-pill" type="button" title="同步狀態">
+          <span class="dot"></span><span id="syncText">本機</span>
+        </button>
+      </div>
+      <div class="monthbar">
+        <button id="prevMonth" class="icon-btn" type="button" aria-label="上個月">‹</button>
+        <button id="monthBtn" class="month-btn" type="button" aria-haspopup="true">
+          <span id="monthLabel">—</span>
+        </button>
+        <button id="nextMonth" class="icon-btn" type="button" aria-label="下個月">›</button>
+        <div id="monthPanel" class="month-panel" hidden>
+          <div class="mp-head">
+            <button id="mpPrev" class="icon-btn" type="button" aria-label="上一年">‹</button>
+            <b id="mpYear">2026</b>
+            <button id="mpNext" class="icon-btn" type="button" aria-label="下一年">›</button>
+          </div>
+          <div class="mp-grid" id="mpGrid"></div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <!-- 本月 -->
+      <section id="view-month" class="view">
+        <div class="hero">
+          <div class="hero-top">
+            <span class="hero-label">本月應繳合計</span>
+            <span id="heroBadge" class="badge"></span>
+          </div>
+          <div class="hero-amount"><span id="totalAmount">0</span><small>元</small></div>
+          <div class="progress"><i id="progressBar"></i></div>
+          <div class="hero-grid">
+            <div><span class="k">已繳</span><b id="paidAmount" class="paid">0</b></div>
+            <div><span class="k">未繳</span><b id="unpaidAmount" class="unpaid">0</b></div>
+            <div><span class="k">筆數</span><b id="itemCount">0</b></div>
+          </div>
+          <div id="heroWarn" class="hero-warn" hidden></div>
+        </div>
+
+        <div class="toolbar">
+          <input id="searchInput" class="input toolbar-search" type="search" placeholder="搜尋卡片、帳單、扣款方式…" />
+          <div class="toolbar-row">
+            <div class="filter-chips" id="filterChips">
+              <button class="filter-chip is-active" data-filter="all" type="button">全部</button>
+              <button class="filter-chip" data-filter="unpaid" type="button">未繳</button>
+              <button class="filter-chip" data-filter="paid" type="button">已繳</button>
+              <button class="filter-chip" data-filter="unknown" type="button">待確認</button>
+            </div>
+            <select id="sortSelect" class="select" aria-label="排序方式">
+              <option value="default">預設順序</option>
+              <option value="due">截止日優先</option>
+              <option value="amount-desc">金額高→低</option>
+              <option value="amount-asc">金額低→高</option>
+            </select>
+          </div>
+        </div>
+
+        <section class="block">
+          <div class="block-head">
+            <h2>信用卡 <span id="cardSum" class="sum"></span></h2>
+            <button class="ghost-btn" id="fillCardsBtn" type="button" hidden>建立本月卡片</button>
+          </div>
+          <ul id="cardList" class="list"></ul>
+        </section>
+
+        <section class="block">
+          <div class="block-head">
+            <h2>其他帳單 <span id="otherSum" class="sum"></span></h2>
+            <button class="ghost-btn" id="addOtherBtn" type="button">＋ 新增</button>
+          </div>
+          <div id="templateBar" class="template-bar" hidden></div>
+          <ul id="otherList" class="list"></ul>
+        </section>
+
+        <section class="block" id="instBlock" hidden>
+          <div class="block-head"><h2>分期進度</h2></div>
+          <ul id="instList" class="inst-list"></ul>
+        </section>
+      </section>
+
+      <!-- 年度 -->
+      <section id="view-year" class="view" hidden>
+        <div class="block">
+          <div class="block-head">
+            <h2>年度總覽</h2>
+            <select id="yearSelect" class="select"></select>
+          </div>
+          <div class="stat-row" id="yearStats"></div>
+          <div id="yearChart" class="chart"></div>
+        </div>
+        <div class="block">
+          <div class="block-head"><h2>信用卡年度合計</h2></div>
+          <ul id="cardRank" class="rank-list"></ul>
+        </div>
+        <div class="block">
+          <div class="block-head"><h2>其他帳單年度合計</h2></div>
+          <ul id="otherRank" class="rank-list"></ul>
+        </div>
+      </section>
+
+      <!-- 設定 -->
+      <section id="view-settings" class="view" hidden>
+        <div class="block">
+          <div class="block-head"><h2>跨裝置同步</h2></div>
+          <div id="syncPanel" class="panel">
+            <div id="legacyRoomBox" class="panel" style="border:1px solid var(--warn,#b45309);margin-bottom:12px" hidden>
+              <p class="hint" style="color:var(--warn,#b45309)">
+                <strong>同步已暫停。</strong>這台裝置原本用的是舊版公開同步碼，任何人都能解開那份雲端資料。
+                請按「產生」建立新的同步碼並開啟同步，其他裝置輸入同一組碼。
+              </p>
+              <p id="legacyRoomHint" class="hint">新同步碼同步成功後，再按下方按鈕刪除公開房間裡的舊資料。</p>
+              <div class="btn-row">
+                <button id="clearPublicRoomBtn" class="ghost-btn danger" type="button">清除公開房間的雲端資料</button>
+              </div>
+            </div>
+            <p class="hint">
+              第一台裝置按「產生」建立同步碼，再按「開啟同步」；其他裝置輸入同一組碼即可共用同一份帳本。
+              資料會先用同步碼加密才上傳，同步碼只有你知道。<strong>請把同步碼抄在安全的地方</strong>，忘記就無法解開雲端資料（本機與匯出檔不受影響）。
+            </p>
+            <div class="field">
+              <label for="syncCode">同步碼</label>
+              <div class="input-row">
+                <input id="syncCode" class="input" type="text" inputmode="text" autocomplete="off" placeholder="按「產生」或輸入另一台裝置的同步碼" />
+                <button id="genCodeBtn" class="ghost-btn" type="button">產生</button>
+              </div>
+            </div>
+            <div class="btn-row">
+              <button id="enableSyncBtn" class="primary-btn" type="button">重新連線</button>
+              <button id="syncNowBtn" class="ghost-btn" type="button">立即同步</button>
+              <button id="disableSyncBtn" class="ghost-btn danger" type="button">關閉</button>
+            </div>
+            <p id="syncStatus" class="hint"></p>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="block-head"><h2>資料</h2></div>
+          <div class="panel">
+            <div class="btn-row">
+              <button id="exportBtn" class="ghost-btn" type="button">匯出 JSON</button>
+              <label class="ghost-btn" for="importFile">匯入 JSON</label>
+              <input id="importFile" type="file" accept="application/json,.json" hidden />
+              <button id="resetBtn" class="ghost-btn danger" type="button">清空所有資料</button>
+            </div>
+            <p id="dataInfo" class="hint"></p>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="block-head">
+            <h2>信用卡設定</h2>
+            <button id="addCardMetaBtn" class="ghost-btn" type="button">＋ 新增卡片</button>
+          </div>
+          <p class="hint" style="padding:0 12px">設定結帳日、繳款截止日與預設扣款方式，建立新月份時會自動推算日期。</p>
+          <ul id="cardMetaList" class="rank-list"></ul>
+        </div>
+
+        <div class="block">
+          <div class="block-head">
+            <h2>固定項目範本</h2>
+            <button id="addTemplateBtn" class="ghost-btn" type="button">＋ 新增範本</button>
+          </div>
+          <p class="hint" style="padding:0 12px">每月／每年會自動出現在當月「新增」快捷列，按一下就能帶入當月。</p>
+          <ul id="templateList" class="rank-list"></ul>
+        </div>
+
+        <div class="block">
+          <div class="block-head">
+            <h2>待確認與疑點核對 <span id="issueCount" class="sum"></span></h2>
+          </div>
+          <p class="hint" style="padding:0 12px">金額空白或備註標記疑點的項目，點一下可直接跳轉補齊。</p>
+          <ul id="issueList" class="list"></ul>
+        </div>
+
+        <div class="block">
+          <div class="block-head"><h2>關於</h2></div>
+          <p class="hint">
+            離線可用、資料存在這台裝置；開啟同步後才會上傳加密後的備份。
+            金額空白代表尚未填寫，圖表以 0 計算。
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <nav class="tabbar">
+      <button class="tab is-active" data-view="month" type="button">
+        <span class="tab-ico">▤</span><span>本月</span>
+      </button>
+      <button class="tab" data-view="year" type="button">
+        <span class="tab-ico">▦</span><span>年度</span>
+      </button>
+      <button class="tab" data-view="settings" type="button">
+        <span class="tab-ico">⚙</span><span>設定</span>
+      </button>
+    </nav>
+
+    <dialog id="editor" class="sheet">
+      <form id="editorForm" method="dialog">
+        <div class="sheet-head">
+          <h3 id="editorTitle">編輯</h3>
+          <button type="button" class="icon-btn" id="editorClose" aria-label="關閉">✕</button>
+        </div>
+        <div class="sheet-body">
+          <div class="field" id="nameField">
+            <label for="fName">名稱</label>
+            <input id="fName" class="input" type="text" />
+          </div>
+          <div class="field">
+            <label for="fAmount">金額</label>
+            <input id="fAmount" class="input" type="number" inputmode="numeric" step="1" placeholder="空白 = 未填" />
+          </div>
+          <div class="two-col">
+            <div class="field">
+              <label for="fDue">繳款截止</label>
+              <input id="fDue" class="input" type="date" />
+            </div>
+            <div class="field">
+              <label for="fPaidDate">繳款日期</label>
+              <input id="fPaidDate" class="input" type="date" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="fVia">繳款方式</label>
+            <input id="fVia" class="input" type="text" list="viaList" placeholder="台銀、Richart、街口…" />
+            <datalist id="viaList">
+              <option value="台銀"></option>
+              <option value="玉山帳戶"></option>
+              <option value="中信"></option>
+              <option value="DAWHO"></option>
+              <option value="Richart"></option>
+              <option value="NEWNEW"></option>
+              <option value="LineBank"></option>
+              <option value="街口帳戶"></option>
+              <option value="ipassmoney"></option>
+              <option value="聯邦"></option>
+              <option value="台新"></option>
+            </datalist>
+          </div>
+          <div class="two-col" id="instFields">
+            <div class="field">
+              <label for="fInstCur">已繳期數</label>
+              <input id="fInstCur" class="input" type="number" min="0" step="1" />
+            </div>
+            <div class="field">
+              <label for="fInstTotal">總期數</label>
+              <input id="fInstTotal" class="input" type="number" min="1" step="1" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="fNote">備註</label>
+            <textarea id="fNote" class="input" rows="2"></textarea>
+          </div>
+          <label class="check-row" id="paidRow">
+            <input id="fPaid" type="checkbox" />
+            <span>已繳款</span>
+          </label>
+        </div>
+        <div class="sheet-foot">
+          <button id="deleteBtn" class="ghost-btn danger" type="button">刪除</button>
+          <div class="spacer"></div>
+          <button class="ghost-btn" type="button" id="cancelBtn">取消</button>
+          <button class="primary-btn" type="submit">儲存</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="cardEditor" class="sheet">
+      <form id="cardEditorForm" method="dialog">
+        <div class="sheet-head">
+          <h3 id="cardEditorTitle">編輯信用卡</h3>
+          <button type="button" class="icon-btn" id="cardEditorClose" aria-label="關閉">✕</button>
+        </div>
+        <div class="sheet-body">
+          <div class="two-col">
+            <div class="field">
+              <label for="cName">卡片名稱</label>
+              <input id="cName" class="input" type="text" placeholder="例如：富邦、玉山" required />
+            </div>
+            <div class="field">
+              <label for="cOwner">持卡人</label>
+              <input id="cOwner" class="input" type="text" placeholder="本人 / 家人" />
+            </div>
+          </div>
+          <div class="two-col">
+            <div class="field">
+              <label for="cStmtDay">每月結帳日（1~31）</label>
+              <input id="cStmtDay" class="input" type="number" min="1" max="31" step="1" placeholder="例如 24" />
+            </div>
+            <div class="field">
+              <label for="cDueDay">每月截止日（1~31）</label>
+              <input id="cDueDay" class="input" type="number" min="1" max="31" step="1" placeholder="例如 9" />
+            </div>
+          </div>
+          <div class="two-col">
+            <div class="field">
+              <label for="cVia">預設扣款方式</label>
+              <input id="cVia" class="input" type="text" list="viaList" placeholder="台銀、Richart…" />
+            </div>
+            <div class="field">
+              <label for="cColor">代表色</label>
+              <input id="cColor" class="input" type="color" value="#2563eb" style="height:41px;padding:4px 8px" />
+            </div>
+          </div>
+        </div>
+        <div class="sheet-foot">
+          <button id="cardDeleteBtn" class="ghost-btn danger" type="button">刪除</button>
+          <div class="spacer"></div>
+          <button class="ghost-btn" type="button" id="cardCancelBtn">取消</button>
+          <button class="primary-btn" type="submit">儲存</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="tplEditor" class="sheet">
+      <form id="tplEditorForm" method="dialog">
+        <div class="sheet-head">
+          <h3 id="tplEditorTitle">編輯固定項目</h3>
+          <button type="button" class="icon-btn" id="tplEditorClose" aria-label="關閉">✕</button>
+        </div>
+        <div class="sheet-body">
+          <div class="field">
+            <label for="tName">項目名稱</label>
+            <input id="tName" class="input" type="text" placeholder="例如：房貸、電費" required />
+          </div>
+          <div class="two-col">
+            <div class="field">
+              <label for="tAmount">預設金額</label>
+              <input id="tAmount" class="input" type="number" step="1" placeholder="空白 = 每月變動" />
+            </div>
+            <div class="field">
+              <label for="tDueDay">每月截止日（1~31）</label>
+              <input id="tDueDay" class="input" type="number" min="1" max="31" step="1" placeholder="選填" />
+            </div>
+          </div>
+          <div class="two-col">
+            <div class="field">
+              <label for="tRecurrence">週期</label>
+              <select id="tRecurrence" class="input">
+                <option value="monthly">每月固定</option>
+                <option value="yearly">每年固定（指定月份）</option>
+              </select>
+            </div>
+            <div class="field" id="tMonthField" hidden>
+              <label for="tMonth">指定月份（1~12）</label>
+              <input id="tMonth" class="input" type="number" min="1" max="12" step="1" value="6" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="tVia">預設繳款方式</label>
+            <input id="tVia" class="input" type="text" list="viaList" placeholder="街口帳戶、轉帳…" />
+          </div>
+          <div class="two-col">
+            <div class="field">
+              <label for="tInstCur">基準已繳期數（選填）</label>
+              <input id="tInstCur" class="input" type="number" min="0" step="1" />
+            </div>
+            <div class="field">
+              <label for="tInstTotal">總期數（選填）</label>
+              <input id="tInstTotal" class="input" type="number" min="1" step="1" />
+            </div>
+          </div>
+        </div>
+        <div class="sheet-foot">
+          <button id="tplDeleteBtn" class="ghost-btn danger" type="button">刪除</button>
+          <div class="spacer"></div>
+          <button class="ghost-btn" type="button" id="tplCancelBtn">取消</button>
+          <button class="primary-btn" type="submit">儲存</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script type="module" src="js/app.js"></script>
+  </body>
+</html>
